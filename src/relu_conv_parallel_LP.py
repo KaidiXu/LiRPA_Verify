@@ -38,8 +38,11 @@ def batch_verification(d, net, batch, pre_relu_indices, no_LP, growth_rate, deci
     if mask is not None:
         branching_decision = choose_node_parallel(orig_lbs, orig_ubs, mask, net.layers, pre_relu_indices,
                                                   None, 0, batch=batch)
-
         print('splitting decisions: {}'.format(branching_decision))
+        if not branching_decision or len(selected_domains)!=len(branching_decision):
+            print("no unstable relus in some branches, call LP!")
+            d[:] = selected_domains+d
+            return None
         # print('history', selected_domains[0].history)
         history = [sd.history for sd in selected_domains]
         # print(len(history), history, len(branching_decision))
@@ -137,7 +140,6 @@ def relu_bab_parallel(net, domain, x, batch=64, no_LP=False, growth_rate=0, deci
     global_ub, global_lb, global_ub_point, duals, primals, updated_mask, lower_bounds, upper_bounds, pre_relu_indices, slope = net.build_the_model(
         domain, x, no_lp=no_LP, decision_thresh=decision_thresh)
 
-
     print(global_lb)
     if global_lb > decision_thresh:
         return global_lb, global_ub, global_ub_point, 0, max_length
@@ -160,6 +162,7 @@ def relu_bab_parallel(net, domain, x, batch=64, no_LP=False, growth_rate=0, deci
         if no_LP:
             global_lb = batch_verification(domains, net, batch, pre_relu_indices, no_LP, 0,
                                            decision_thresh=decision_thresh, lr_alpha=lr_alpha)
+
             if len(domains) > max_subproblems_list:
                 print("reach the maximum number for the domain list")
                 del domains
@@ -177,6 +180,9 @@ def relu_bab_parallel(net, domain, x, batch=64, no_LP=False, growth_rate=0, deci
                     domain, x, no_lp=no_LP, decision_thresh=decision_thresh, continue_LP=[upper_boundsc, lower_boundsc, slopec])
 
                 print(global_lb)
+                if global_ub < decision_thresh:
+                    print("unsafe checked by LP")
+                    return global_ub, global_ub, global_ub_point, 0, max_length
                 if global_lb > decision_thresh:
                     return global_lb, global_ub, global_ub_point, 0, max_length
 
@@ -188,6 +194,10 @@ def relu_bab_parallel(net, domain, x, batch=64, no_LP=False, growth_rate=0, deci
                 torch.cuda.empty_cache()
                 while len(domains) > 0:
                     global_lb = batch_verification(domains, net, 1, pre_relu_indices, no_LP=False, growth_rate=0.2, lr_alpha=lr_alpha)
+                    if global_lb is None:
+                        del domain
+                        print("unsafe checked by LP")
+                        return current_lb, global_ub, None, Visited, max_length
                     if global_lb >= decision_thresh:
                         del domains
                         return global_lb, np.inf, None, Visited, max_length
@@ -198,6 +208,10 @@ def relu_bab_parallel(net, domain, x, batch=64, no_LP=False, growth_rate=0, deci
             else:
                 batch_count += 1
                 global_lb = batch_verification(domains, net, batch, pre_relu_indices, no_LP=True, growth_rate=0, lr_alpha=lr_alpha)
+
+                if global_lb is None:
+                    batch_early_stop = True
+                    continue
 
                 # track whether no improvement
                 if batch_count % 20 == 0:
