@@ -1,5 +1,11 @@
 ## Fast and Complete: Enabling *Complete* Neural Network Verification with *Rapid* and Massively Parallel *Incomplete* Verifiers
 
+**Note:** If you aim to apply neural network verification in your application, **you should use the latest [*α*,*β*-CROWN](https://github.com/Verified-Intelligence/alpha-beta-CROWN) verifier**, which includes stronger verification algorithms based on [*β*-CROWN](https://arxiv.org/pdf/2103.06624.pdf) and [GCP-CROWN](https://arxiv.org/pdf/2208.05740.pdf), more efficient implementations, improved user interface, and a lot of usage examples. *α*,*β*-CROWN was the winners of the 2021 and 2022 International Verification of Neural Networks Competition (VNN-COMP).
+
+**This repository and the instructions below are used only for reproducing results in our original ICLR 2021 paper.** Do not use this repository for any applications of neural network verification. This repository is not maintained and you should not work on this codebase. Use [*α*,*β*-CROWN](https://github.com/Verified-Intelligence/alpha-beta-CROWN) instead.
+
+ --- 
+
 Fast-and-Complete is an efficient and GPU based verifier for formally checking
 the correctness or robustness of neural networks. It empolys an efficient
 backward bound propagation algorithm
